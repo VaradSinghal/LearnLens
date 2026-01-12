@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "140170049224",
+    "project_id": "learnlens-6c98c",
+    "storage_bucket": "learnlens-6c98c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140170049224:android:af16990b1db73b7bf897fd",
+        "android_client_info": {
+          "package_name": "com.example.learnlens"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOoJrcwfVEoVPwC37_FGcpvSapRdQ_s4c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
