@@ -25,12 +25,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
-    LLM_PROVIDER: str = "openai"  # openai, anthropic, google
-    LLM_MODEL: str = "gpt-4-turbo-preview"
+    LLM_PROVIDER: str = "google"  # openai, anthropic, google (google has free tier)
+    LLM_MODEL: str = "gemini-1.5-flash"  # Free tier model
     
     # Embeddings (required for Pinecone)
-    EMBEDDING_PROVIDER: str = "openai"  # Required for Pinecone
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_PROVIDER: str = "google"  # google has free tier embeddings
+    EMBEDDING_MODEL: str = "text-embedding-004"  # Google embedding model
     
     # Chunking
     CHUNK_SIZE: int = 500  # tokens

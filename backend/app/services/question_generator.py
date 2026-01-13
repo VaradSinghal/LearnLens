@@ -23,11 +23,15 @@ class QuestionGenerator:
     ) -> List[Question]:
         """Generate questions for a document."""
         # Get document chunks from Firestore
+        # Note: Using simple query without order_by to avoid requiring composite index
         chunks_query = self.db.collection(Chunk.collection_name()).where(
             "document_id", "==", document_id
-        ).order_by("chunk_index")
+        )
         
         chunks_docs = list(chunks_query.stream())
+        
+        # Sort chunks by chunk_index in memory (avoids requiring Firestore composite index)
+        chunks_docs.sort(key=lambda doc: doc.to_dict().get("chunk_index", 0))
         
         if not chunks_docs:
             raise ValueError("No chunks found for document")

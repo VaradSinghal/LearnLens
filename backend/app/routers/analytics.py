@@ -17,7 +17,13 @@ async def get_performance_analytics(
     current_user: dict = Depends(get_current_user),
 ):
     """Get comprehensive performance analytics."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     user_id = current_user["user_id"]
     
     # Get user's attempts
@@ -202,7 +208,13 @@ async def get_document_summary(
     current_user: dict = Depends(get_current_user),
 ):
     """Get summary analytics for a specific document."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     # Verify document belongs to user
     doc_ref = db.collection(Document.collection_name()).document(str(document_id))

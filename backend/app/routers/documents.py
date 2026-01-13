@@ -29,7 +29,13 @@ async def upload_document(
             detail=f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}"
         )
     
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     document = None
     doc_ref = None
@@ -101,7 +107,13 @@ async def list_documents(
     current_user: dict = Depends(get_current_user),
 ):
     """List user's documents."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     # Query Firestore
     query = db.collection(Document.collection_name()).where(
@@ -166,7 +178,13 @@ async def get_document(
     current_user: dict = Depends(get_current_user),
 ):
     """Get a specific document."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     doc_ref = db.collection(Document.collection_name()).document(str(document_id))
     doc = doc_ref.get()
@@ -191,7 +209,13 @@ async def delete_document(
     current_user: dict = Depends(get_current_user),
 ):
     """Delete a document and its associated data."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     doc_ref = db.collection(Document.collection_name()).document(str(document_id))
     doc = doc_ref.get()

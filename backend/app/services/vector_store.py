@@ -13,23 +13,71 @@ class VectorStore:
     
     def _initialize_client(self):
         """Initialize Pinecone client."""
-        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-        index_name = settings.PINECONE_INDEX_NAME
-        
-        # Check if index exists, create if not
-        existing_indexes = [idx.name for idx in pc.list_indexes()]
-        if index_name not in existing_indexes:
-            pc.create_index(
-                name=index_name,
-                dimension=1536,  # OpenAI embedding dimension
-                metric="cosine",
-                spec=ServerlessSpec(
-                    cloud="aws",
-                    region=settings.PINECONE_ENVIRONMENT,
-                ),
+        if not settings.PINECONE_API_KEY:
+            raise ValueError(
+                "Pinecone API key not configured. Please set PINECONE_API_KEY in environment variables."
             )
         
-        self.index = pc.Index(index_name)
+        try:
+            pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+            index_name = settings.PINECONE_INDEX_NAME
+            
+            # Determine embedding dimension based on provider
+            # OpenAI text-embedding-3-small: 1536
+            # Google text-embedding-004: 768
+            embedding_dimension = 768 if settings.EMBEDDING_PROVIDER == "google" else 1536
+            
+            # Check if index exists
+            existing_indexes = [idx.name for idx in pc.list_indexes()]
+            if index_name not in existing_indexes:
+                # Create new index with correct dimension
+                pc.create_index(
+                    name=index_name,
+                    dimension=embedding_dimension,
+                    metric="cosine",
+                    spec=ServerlessSpec(
+                        cloud="aws",
+                        region=settings.PINECONE_ENVIRONMENT,
+                    ),
+                )
+                print(f"Created Pinecone index '{index_name}' with dimension {embedding_dimension}")
+            else:
+                # Check if existing index has correct dimension
+                index_info = pc.describe_index(index_name)
+                existing_dimension = index_info.dimension
+                
+                if existing_dimension != embedding_dimension:
+                    # Dimension mismatch - need to delete and recreate
+                    print(f"Warning: Existing index '{index_name}' has dimension {existing_dimension}, "
+                          f"but current embedding provider requires {embedding_dimension}.")
+                    print(f"Deleting and recreating index '{index_name}' with correct dimension...")
+                    print("Note: All existing vectors in this index will be lost.")
+                    
+                    # Delete the existing index
+                    pc.delete_index(index_name)
+                    
+                    # Wait a moment for deletion to complete
+                    import time
+                    time.sleep(2)
+                    
+                    # Create new index with correct dimension
+                    pc.create_index(
+                        name=index_name,
+                        dimension=embedding_dimension,
+                        metric="cosine",
+                        spec=ServerlessSpec(
+                            cloud="aws",
+                            region=settings.PINECONE_ENVIRONMENT,
+                        ),
+                    )
+                    print(f"Recreated Pinecone index '{index_name}' with dimension {embedding_dimension}")
+            
+            self.index = pc.Index(index_name)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to initialize Pinecone: {str(e)}. "
+                "Please check your PINECONE_API_KEY and PINECONE_ENVIRONMENT settings."
+            )
     
     async def add_chunk(
         self,

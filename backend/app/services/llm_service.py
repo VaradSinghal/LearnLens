@@ -15,11 +15,19 @@ class LLMService:
         
         # Initialize provider clients
         if self.provider == "openai":
+            if not settings.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER is 'openai'")
             self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         elif self.provider == "anthropic":
+            if not settings.ANTHROPIC_API_KEY:
+                raise ValueError("ANTHROPIC_API_KEY is required when LLM_PROVIDER is 'anthropic'")
             self.anthropic_client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
         elif self.provider == "google":
+            if not settings.GOOGLE_API_KEY:
+                raise ValueError("GOOGLE_API_KEY is required when LLM_PROVIDER is 'google'. Get a free API key from https://makersuite.google.com/app/apikey")
             genai.configure(api_key=settings.GOOGLE_API_KEY)
+        else:
+            raise ValueError(f"Unknown LLM provider: {self.provider}. Supported: 'openai', 'anthropic', 'google'")
     
     async def generate_questions(
         self,
@@ -205,9 +213,18 @@ Only return the JSON, no additional text."""
             return message.content[0].text
         
         elif self.provider == "google":
-            model = genai.GenerativeModel(self.model)
-            response = await model.generate_content_async(prompt)
-            return response.text
+            try:
+                model = genai.GenerativeModel(self.model)
+                response = await model.generate_content_async(prompt)
+                # Handle response structure
+                if hasattr(response, 'text'):
+                    return response.text
+                elif hasattr(response, 'candidates') and len(response.candidates) > 0:
+                    return response.candidates[0].content.parts[0].text
+                else:
+                    raise ValueError("Unexpected response format from Google API")
+            except Exception as e:
+                raise RuntimeError(f"Google API error: {str(e)}. Make sure GOOGLE_API_KEY is valid and the model '{self.model}' is available.")
         
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider}")

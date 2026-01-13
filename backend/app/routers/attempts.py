@@ -18,7 +18,13 @@ async def submit_attempt(
     current_user: dict = Depends(get_current_user),
 ):
     """Submit an answer attempt."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     # Get question
     q_ref = db.collection(Question.collection_name()).document(str(attempt_data.question_id))
@@ -83,7 +89,13 @@ async def list_attempts(
     current_user: dict = Depends(get_current_user),
 ):
     """List user's attempts."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     query = db.collection(Attempt.collection_name()).where(
         "user_id", "==", current_user["user_id"]
@@ -136,7 +148,13 @@ async def get_attempt(
     current_user: dict = Depends(get_current_user),
 ):
     """Get a specific attempt."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     attempt_ref = db.collection(Attempt.collection_name()).document(str(attempt_id))
     attempt_doc = attempt_ref.get()

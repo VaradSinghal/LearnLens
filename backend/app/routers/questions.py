@@ -21,7 +21,13 @@ async def generate_questions(
     current_user: dict = Depends(get_current_user),
 ):
     """Generate questions for a document."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     # Verify document belongs to user
     doc_ref = db.collection(Document.collection_name()).document(str(document_id))
@@ -76,7 +82,13 @@ async def list_questions(
     current_user: dict = Depends(get_current_user),
 ):
     """List questions for a document."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     # Verify document belongs to user
     doc_ref = db.collection(Document.collection_name()).document(str(document_id))
@@ -131,7 +143,13 @@ async def get_question(
     current_user: dict = Depends(get_current_user),
 ):
     """Get a specific question."""
-    db = get_firestore()
+    try:
+        db = get_firestore()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database not initialized: {str(e)}"
+        )
     
     q_ref = db.collection(Question.collection_name()).document(str(question_id))
     q_doc = q_ref.get()

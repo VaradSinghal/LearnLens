@@ -1,6 +1,7 @@
 """Authentication router."""
 from fastapi import APIRouter, Depends, HTTPException, Header
 from typing import Optional
+import firebase_admin
 from firebase_admin import auth
 from app.database import initialize_firebase
 
