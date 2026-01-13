@@ -215,5 +215,15 @@ class ApiClient {
     final response = await _dio.get('/analytics/document/$documentId/summary');
     return response.data;
   }
+
+  /// Check if backend is healthy/accessible
+  Future<bool> checkHealth() async {
+    try {
+      final response = await _dio.get('/health');
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 }
 

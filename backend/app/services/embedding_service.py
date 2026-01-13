@@ -2,7 +2,7 @@
 from typing import List
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
-import google.generativeai as genai
+from google import genai
 from app.config import settings
 
 
@@ -25,7 +25,8 @@ class EmbeddingService:
         elif self.provider == "google":
             if not settings.GOOGLE_API_KEY:
                 raise ValueError("GOOGLE_API_KEY is required when EMBEDDING_PROVIDER is 'google'. Get a free API key from https://makersuite.google.com/app/apikey")
-            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            # Initialize Google GenAI client
+            self.google_client = genai.Client(api_key=settings.GOOGLE_API_KEY)
         else:
             raise ValueError(f"Unknown embedding provider: {self.provider}. Supported: 'openai', 'google'")
     
@@ -44,16 +45,23 @@ class EmbeddingService:
             raise NotImplementedError("Anthropic embeddings not yet implemented")
         
         elif self.provider == "google":
-            # Google Generative AI embeddings
+            # Google GenAI embeddings using client
             try:
-                result = genai.embed_content(
-                    model="models/text-embedding-004",
-                    content=text,
+                import asyncio
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: self.google_client.models.embed_content(
+                        model="text-embedding-004",
+                        content=text,
+                    )
                 )
                 if isinstance(result, dict) and "embedding" in result:
                     return result["embedding"]
                 elif hasattr(result, "embedding"):
                     return result.embedding
+                elif hasattr(result, "values"):
+                    return result.values
                 else:
                     raise ValueError("Unexpected response format from Google embedding API")
             except Exception as e:
@@ -73,14 +81,22 @@ class EmbeddingService:
         
         elif self.provider == "google":
             try:
-                results = genai.embed_content(
-                    model="models/text-embedding-004",
-                    content=texts,
+                # Try batch embedding
+                import asyncio
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(
+                    None,
+                    lambda: self.google_client.models.embed_content(
+                        model="text-embedding-004",
+                        content=texts,
+                    )
                 )
                 if isinstance(results, dict) and "embeddings" in results:
                     return results["embeddings"]
                 elif hasattr(results, "embeddings"):
                     return results.embeddings
+                elif isinstance(results, list):
+                    return [item.embedding if hasattr(item, "embedding") else item for item in results]
                 else:
                     # Fallback: embed sequentially if batch doesn't work
                     return [await self.embed_text(text) for text in texts]

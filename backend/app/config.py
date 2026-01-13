@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
     LLM_PROVIDER: str = "google"  # openai, anthropic, google (google has free tier)
-    LLM_MODEL: str = "gemini-1.5-flash"  # Free tier model
+    LLM_MODEL: str = "gemini-2.5-flash"  # Free tier model (gemini-2.0-flash is available in google.genai)
     
     # Embeddings (required for Pinecone)
     EMBEDDING_PROVIDER: str = "google"  # google has free tier embeddings

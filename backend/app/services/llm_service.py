@@ -2,7 +2,7 @@
 from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
-import google.generativeai as genai
+from google import genai
 from app.config import settings
 
 
@@ -25,7 +25,8 @@ class LLMService:
         elif self.provider == "google":
             if not settings.GOOGLE_API_KEY:
                 raise ValueError("GOOGLE_API_KEY is required when LLM_PROVIDER is 'google'. Get a free API key from https://makersuite.google.com/app/apikey")
-            genai.configure(api_key=settings.GOOGLE_API_KEY)
+            # Initialize Google GenAI client
+            self.google_client = genai.Client(api_key=settings.GOOGLE_API_KEY)
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider}. Supported: 'openai', 'anthropic', 'google'")
     
@@ -214,17 +215,54 @@ Only return the JSON, no additional text."""
         
         elif self.provider == "google":
             try:
-                model = genai.GenerativeModel(self.model)
-                response = await model.generate_content_async(prompt)
+                # Google GenAI uses client.models.generate_content
+                # Model names: gemini-2.0-flash, gemini-2.0-flash-exp, gemini-1.5-pro, etc.
+                model_name = self.model.replace('models/', '') if self.model.startswith('models/') else self.model
+                
+                # Run synchronous call in executor for async compatibility
+                import asyncio
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: self.google_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                )
+                
                 # Handle response structure
                 if hasattr(response, 'text'):
                     return response.text
                 elif hasattr(response, 'candidates') and len(response.candidates) > 0:
-                    return response.candidates[0].content.parts[0].text
+                    if hasattr(response.candidates[0], 'content') and hasattr(response.candidates[0].content, 'parts'):
+                        return response.candidates[0].content.parts[0].text
+                    elif hasattr(response.candidates[0], 'text'):
+                        return response.candidates[0].text
                 else:
                     raise ValueError("Unexpected response format from Google API")
             except Exception as e:
-                raise RuntimeError(f"Google API error: {str(e)}. Make sure GOOGLE_API_KEY is valid and the model '{self.model}' is available.")
+                error_msg = str(e)
+                # Provide helpful error message with available models
+                if "404" in error_msg or "not found" in error_msg.lower() or "NOT_FOUND" in error_msg:
+                    # Try to list available models
+                    try:
+                        import asyncio
+                        loop = asyncio.get_event_loop()
+                        models = await loop.run_in_executor(
+                            None,
+                            lambda: list(self.google_client.models.list())
+                        )
+                        available_models = [m.name.split('/')[-1] for m in models[:10]]  # Get first 10 model names
+                        models_str = ", ".join(available_models) if available_models else "gemini-2.0-flash, gemini-1.5-pro"
+                    except:
+                        models_str = "gemini-2.0-flash, gemini-1.5-pro, gemini-pro"
+                    
+                    raise RuntimeError(
+                        f"Google model '{self.model}' not found. "
+                        f"Available models: {models_str}. "
+                        f"Error: {error_msg}"
+                    )
+                raise RuntimeError(f"Google API error: {error_msg}. Make sure GOOGLE_API_KEY is valid.")
         
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider}")
