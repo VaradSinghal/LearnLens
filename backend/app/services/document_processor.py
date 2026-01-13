@@ -56,12 +56,17 @@ class DocumentProcessor:
         
         # Store chunks in Pinecone and Firestore
         chunk_metadata = []
+        from uuid import uuid4
+        
         for idx, chunk_data in enumerate(chunks):
+            chunk_text = chunk_data.get("text", "").strip()
+            if not chunk_text:
+                continue
+            
+            chunk_id = None
+            embedding_success = False
+            
             try:
-                chunk_text = chunk_data.get("text", "").strip()
-                if not chunk_text:
-                    continue
-                
                 # Generate embedding for Pinecone
                 embedding = await self.embedding_service.embed_text(chunk_text)
                 
@@ -78,8 +83,16 @@ class DocumentProcessor:
                         "user_id": user_id,
                     },
                 )
-                
-                # Store chunk metadata in Firestore
+                embedding_success = True
+            except Exception as e:
+                # Log error but continue - we'll still store chunk in Firestore
+                print(f"Error generating embedding for chunk {idx}: {e}")
+                # Generate a chunk_id even if embedding fails
+                chunk_id = uuid4()
+            
+            # Always store chunk metadata in Firestore (even if embedding failed)
+            # This ensures questions can still be generated from the text
+            try:
                 chunk = Chunk(
                     chunk_id=chunk_id,
                     document_id=doc_uuid,
@@ -101,7 +114,7 @@ class DocumentProcessor:
                 })
             except Exception as e:
                 # Log error but continue with other chunks
-                print(f"Error processing chunk {idx}: {e}")
+                print(f"Error storing chunk {idx} in Firestore: {e}")
                 continue
         
         return {

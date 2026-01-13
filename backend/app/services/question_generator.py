@@ -34,7 +34,7 @@ class QuestionGenerator:
         chunks_docs.sort(key=lambda doc: doc.to_dict().get("chunk_index", 0))
         
         if not chunks_docs:
-            raise ValueError("No chunks found for document")
+            raise ValueError("No chunks found for document. The document may not have been processed successfully or contains no extractable text.")
         
         # Get chunk texts
         chunk_texts = []
@@ -57,7 +57,7 @@ class QuestionGenerator:
                     valid_chunk_ids.append(chunk_doc.id)
         
         if not chunk_texts:
-            raise ValueError("Could not retrieve chunk texts")
+            raise ValueError("Could not retrieve chunk texts. The document chunks may be corrupted or missing text content.")
         
         # Generate questions using LLM
         questions_data = await self.llm_service.generate_questions(

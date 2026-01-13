@@ -49,21 +49,51 @@ class EmbeddingService:
             try:
                 import asyncio
                 loop = asyncio.get_event_loop()
+                # Use correct parameter name: 'contents' (plural) not 'content'
+                # Model name should match available Google embedding models
+                embedding_model = self.model if self.model else "text-embedding-004"
                 result = await loop.run_in_executor(
                     None,
                     lambda: self.google_client.models.embed_content(
-                        model="text-embedding-004",
-                        content=text,
+                        model=embedding_model,
+                        contents=text,  # Use 'contents' (plural)
                     )
                 )
-                if isinstance(result, dict) and "embedding" in result:
-                    return result["embedding"]
+                # Handle different response formats
+                # Google GenAI typically returns an object with 'embeddings' attribute
+                if hasattr(result, "embeddings"):
+                    embeddings = result.embeddings
+                    if isinstance(embeddings, list) and len(embeddings) > 0:
+                        # Get first embedding from list
+                        embedding = embeddings[0]
+                        if hasattr(embedding, "values"):
+                            return embedding.values
+                        elif isinstance(embedding, list):
+                            return embedding
+                        else:
+                            return embedding
+                    elif embeddings:
+                        # Single embedding object
+                        if hasattr(embeddings, "values"):
+                            return embeddings.values
+                        elif isinstance(embeddings, list):
+                            return embeddings[0] if len(embeddings) > 0 else embeddings
+                        else:
+                            return embeddings
+                elif isinstance(result, dict):
+                    if "embeddings" in result:
+                        embeddings = result["embeddings"]
+                        return embeddings[0] if isinstance(embeddings, list) and len(embeddings) > 0 else embeddings
+                    elif "embedding" in result:
+                        return result["embedding"]
                 elif hasattr(result, "embedding"):
                     return result.embedding
                 elif hasattr(result, "values"):
                     return result.values
                 else:
-                    raise ValueError("Unexpected response format from Google embedding API")
+                    # Debug: print result type for troubleshooting
+                    print(f"Unexpected Google embedding response type: {type(result)}, attributes: {dir(result) if hasattr(result, '__dict__') else 'N/A'}")
+                    raise ValueError(f"Unexpected response format from Google embedding API. Response type: {type(result)}")
             except Exception as e:
                 raise RuntimeError(f"Google embedding API error: {str(e)}. Make sure GOOGLE_API_KEY is valid.")
         
@@ -84,14 +114,23 @@ class EmbeddingService:
                 # Try batch embedding
                 import asyncio
                 loop = asyncio.get_event_loop()
+                embedding_model = self.model if self.model else "text-embedding-004"
                 results = await loop.run_in_executor(
                     None,
                     lambda: self.google_client.models.embed_content(
-                        model="text-embedding-004",
-                        content=texts,
+                        model=embedding_model,
+                        contents=texts,  # Use 'contents' (plural) - accepts list
                     )
                 )
-                if isinstance(results, dict) and "embeddings" in results:
+                # Handle response format
+                if hasattr(results, "embeddings") and results.embeddings:
+                    embeddings_list = results.embeddings
+                    # Extract values from each embedding
+                    return [
+                        emb.values if hasattr(emb, "values") else (emb if isinstance(emb, list) else [emb])
+                        for emb in embeddings_list
+                    ]
+                elif isinstance(results, dict) and "embeddings" in results:
                     return results["embeddings"]
                 elif hasattr(results, "embeddings"):
                     return results.embeddings

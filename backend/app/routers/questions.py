@@ -46,14 +46,30 @@ async def generate_questions(
             detail=f"Document not ready. Status: {doc_data.get('status')}"
         )
     
+    # Check if document has chunks before generating questions
+    chunks_query = db.collection("chunks").where("document_id", "==", str(document_id))
+    chunks_docs = list(chunks_query.stream())
+    
+    if not chunks_docs:
+        raise HTTPException(
+            status_code=400,
+            detail="Document has no chunks. Please ensure the document was processed successfully and contains extractable text."
+        )
+    
     # Generate questions
     generator = QuestionGenerator()
-    questions = await generator.generate_questions(
-        document_id=str(document_id),
-        question_type=question_type,
-        difficulty=difficulty,
-        num_questions=num_questions,
-    )
+    try:
+        questions = await generator.generate_questions(
+            document_id=str(document_id),
+            question_type=question_type,
+            difficulty=difficulty,
+            num_questions=num_questions,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
     
     # Convert to response format
     question_responses = []
