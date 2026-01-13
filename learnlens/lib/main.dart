@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'bloc/document/document_bloc.dart';
 import 'bloc/question/question_bloc.dart';
+import 'core/user_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -41,6 +42,14 @@ class MyApp extends StatelessWidget {
               );
             }
             if (snapshot.hasData) {
+              // Ensure user document exists when user is logged in
+              final user = snapshot.data;
+              if (user != null) {
+                // Ensure user document exists (non-blocking)
+                UserService.ensureUserDocumentExists(user).catchError((e) {
+                  print('Error ensuring user document on auth state change: $e');
+                });
+              }
               return const HomeScreen();
             }
             return const LoginScreen();

@@ -35,7 +35,9 @@ async def verify_firebase_token(authorization: Optional[str] = Header(None, alia
         if not token:
             raise HTTPException(status_code=401, detail="Token is empty")
         
-        decoded_token = auth.verify_id_token(token)
+        # Verify token with clock skew tolerance (60 seconds max) to handle clock differences
+        # between client and server
+        decoded_token = auth.verify_id_token(token, clock_skew_seconds=60)
         return decoded_token
     except HTTPException:
         raise
@@ -52,6 +54,11 @@ async def verify_firebase_token(authorization: Optional[str] = Header(None, alia
         # Provide more helpful error messages
         if "expired" in error_msg.lower():
             raise HTTPException(status_code=401, detail="Token has expired. Please log in again.")
+        elif "too early" in error_msg.lower() or "clock" in error_msg.lower():
+            raise HTTPException(
+                status_code=401, 
+                detail="Clock synchronization issue. Please check your device's time settings or try again."
+            )
         elif "invalid" in error_msg.lower() or "malformed" in error_msg.lower():
             raise HTTPException(status_code=401, detail="Invalid token. Please log in again.")
         else:

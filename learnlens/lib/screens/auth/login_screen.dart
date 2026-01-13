@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
+import '../../core/user_service.dart';
 import '../home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,10 +31,22 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // Ensure user document exists in Firestore (create if missing)
+      if (userCredential.user != null) {
+        // Reload user to ensure all data is available
+        await userCredential.user!.reload();
+        final currentUser = FirebaseAuth.instance.currentUser;
+        
+        if (currentUser != null) {
+          // Ensure user document exists (creates if missing, updates if exists)
+          await UserService.ensureUserDocumentExists(currentUser);
+        }
+      }
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -52,7 +65,24 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Authentication failed. Please try again.';
-        if (e.toString().isNotEmpty) {
+        if (e.toString().contains('PigeonUserDetails') || 
+            e.toString().contains('PlatformException')) {
+          // If there's a Pigeon error but user is logged in, try to continue
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null) {
+            try {
+              await UserService.ensureUserDocumentExists(currentUser);
+              if (mounted) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+                return;
+              }
+            } catch (_) {
+              errorMessage = 'Signed in but there was an issue. Please try again.';
+            }
+          }
+        } else if (e.toString().isNotEmpty) {
           errorMessage = 'Error: ${e.toString().split('\n').first}';
         }
         

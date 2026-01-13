@@ -32,7 +32,7 @@ async def get_performance_analytics(
     )
     
     # Filter by document if provided
-    question_ids = None
+    document_question_ids = None
     if document_id:
         # Verify document belongs to user
         doc_ref = db.collection(Document.collection_name()).document(str(document_id))
@@ -40,25 +40,25 @@ async def get_performance_analytics(
         if not doc.exists or doc.to_dict().get("user_id") != user_id:
             raise HTTPException(status_code=404, detail="Document not found")
         
-        # Get question IDs for this document
+        # Get question IDs for this document (as strings, matching how they're stored in attempts)
         questions_query = db.collection(Question.collection_name()).where(
             "document_id", "==", str(document_id)
         )
-        question_ids = [q.id for q in questions_query.stream()]
+        document_question_ids = [q.id for q in questions_query.stream()]
     
     # Get attempts
-    if question_ids and len(question_ids) <= 10:
+    if document_question_ids and len(document_question_ids) <= 10:
         # Use Firestore "in" query (supports up to 10 items)
         attempts_docs = list(base_attempts_query.where(
-            "question_id", "in", question_ids
+            "question_id", "in", document_question_ids
         ).stream())
     else:
         # Get all attempts and filter in memory if needed
         all_attempts = list(base_attempts_query.stream())
-        if question_ids:
+        if document_question_ids:
             attempts_docs = [
                 a for a in all_attempts 
-                if a.to_dict().get("question_id") in question_ids
+                if a.to_dict().get("question_id") in document_question_ids
             ]
         else:
             attempts_docs = all_attempts
@@ -74,34 +74,43 @@ async def get_performance_analytics(
             progress_over_time=[],
         )
     
-    # Convert to Attempt objects
+    # Convert to Attempt objects and collect unique question IDs
     attempts = []
-    question_ids = []
+    attempt_question_ids = set()  # Use set to avoid duplicates
     for attempt_doc in attempts_docs:
         attempt_data = attempt_doc.to_dict()
+        # Ensure user_id is present (should already be there, but verify)
+        if not attempt_data.get("user_id"):
+            attempt_data["user_id"] = user_id
         attempt_data["attempt_id"] = UUID(attempt_doc.id)
-        attempts.append(Attempt.from_dict(attempt_data))
-        question_ids.append(attempt_data.get("question_id"))
+        attempt = Attempt.from_dict(attempt_data)
+        attempts.append(attempt)
+        # Store question_id as string for dictionary lookup
+        if attempt.question_id:
+            attempt_question_ids.add(str(attempt.question_id))
     
     # Calculate overall accuracy
     total_attempts = len(attempts)
     correct_attempts = sum(1 for a in attempts if a.is_correct)
     overall_accuracy = correct_attempts / total_attempts if total_attempts > 0 else 0.0
     
-    # Get questions for attempts
+    # Get questions for attempts (using string IDs as keys for dictionary)
     questions_dict = {}
-    for q_id in question_ids:
-        q_ref = db.collection(Question.collection_name()).document(str(q_id))
+    for q_id_str in attempt_question_ids:
+        q_ref = db.collection(Question.collection_name()).document(q_id_str)
         q_doc = q_ref.get()
         if q_doc.exists:
             q_data = q_doc.to_dict()
             q_data["question_id"] = UUID(q_doc.id)
-            questions_dict[q_id] = Question.from_dict(q_data)
+            question = Question.from_dict(q_data)
+            # Store with string key for lookup
+            questions_dict[q_id_str] = question
     
     # Calculate difficulty stats
     difficulty_stats_map = {}
     for attempt in attempts:
-        question = questions_dict.get(attempt.question_id)
+        # Use string version of question_id for lookup
+        question = questions_dict.get(str(attempt.question_id)) if attempt.question_id else None
         if not question:
             continue
         
@@ -135,7 +144,8 @@ async def get_performance_analytics(
     # Calculate topic accuracy (simplified - using "General" if no topic)
     topic_stats_map = {"General": {"total": 0, "correct": 0}}
     for attempt in attempts:
-        question = questions_dict.get(attempt.question_id)
+        # Use string version of question_id for lookup
+        question = questions_dict.get(str(attempt.question_id)) if attempt.question_id else None
         if not question:
             continue
         
@@ -175,6 +185,9 @@ async def get_performance_analytics(
     
     date_accuracy = {}
     for attempt in attempts:
+        # Ensure attempted_at is a datetime object
+        if not attempt.attempted_at or not isinstance(attempt.attempted_at, datetime):
+            continue
         if attempt.attempted_at >= start_date:
             date_key = attempt.attempted_at.date().isoformat()
             if date_key not in date_accuracy:

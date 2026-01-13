@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
+import '../../core/user_service.dart';
 import '../home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -38,14 +39,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: _passwordController.text,
       );
 
-      // Wait a bit for user data to be fully initialized
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Verify user was created successfully
-      if (userCredential.user != null && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+      // Wait for user data to be fully initialized and reload user to avoid Pigeon errors
+      if (userCredential.user != null) {
+        // Reload user to ensure all data is available
+        await userCredential.user!.reload();
+        final currentUser = FirebaseAuth.instance.currentUser;
+        
+        if (currentUser != null) {
+          // Create user document in Firestore
+          await UserService.createOrUpdateUserDocument(currentUser);
+          
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -60,8 +69,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         // Extract meaningful error message
         String errorMessage = 'Registration failed. Please try again.';
-        if (e.toString().contains('PigeonUserDetails')) {
-          errorMessage = 'Account created but there was an issue loading user data. Please try signing in.';
+        if (e.toString().contains('PigeonUserDetails') || 
+            e.toString().contains('PlatformException')) {
+          // If account was created but there's a Pigeon error, try to continue
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null) {
+            try {
+              await UserService.createOrUpdateUserDocument(currentUser);
+              if (mounted) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+                return;
+              }
+            } catch (_) {
+              errorMessage = 'Account created but there was an issue. Please try signing in.';
+            }
+          } else {
+            errorMessage = 'Account created but there was an issue loading user data. Please try signing in.';
+          }
         } else if (e.toString().isNotEmpty) {
           errorMessage = 'Error: ${e.toString().split('\n').first}';
         }
