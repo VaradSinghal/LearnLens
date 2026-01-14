@@ -1,10 +1,21 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../bloc/question/question_bloc.dart';
 import '../models/question.dart';
-import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
+import '../core/api_client.dart';
 import 'question_detail_screen.dart';
+
+// Design colors matching the HTML
+const Color primaryColor = Color(0xFF1FE7F9);
+const Color backgroundColor = Color(0xFF121214);
+const Color cardDark = Color(0xFF1C1C21);
+const Color accentPurple = Color(0xFFA887EB);
+const Color slateSilver = Color(0xFFE0E0E0);
+const Color mutedText = Color(0xFF9DADB8);
+const Color correctGlow = Color(0xFF4ADE80);
 
 /// Screen displaying questions for a document
 class QuestionListScreen extends StatefulWidget {
@@ -18,324 +29,571 @@ class QuestionListScreen extends StatefulWidget {
 
 class _QuestionListScreenState extends State<QuestionListScreen> {
   String _selectedQuestionType = 'mcq';
-  String _selectedDifficulty = 'medium';
+  final ApiClient _apiClient = ApiClient();
+  Map<String, bool> _attemptStatus = {}; // questionId -> hasAttempt
+  bool _loadingAttempts = false;
 
   @override
   void initState() {
     super.initState();
     context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
+    _loadAttemptStatus();
+  }
+
+  Future<void> _loadAttemptStatus() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _loadingAttempts = true;
+    });
+    try {
+      final attempts = await _apiClient.getAttempts();
+      final statusMap = <String, bool>{};
+      for (var attempt in attempts) {
+        final questionId = attempt['question_id']?.toString();
+        if (questionId != null) {
+          statusMap[questionId] = true;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _attemptStatus = statusMap;
+          _loadingAttempts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingAttempts = false;
+        });
+      }
+    }
+  }
+
+  void _refreshQuestions() {
+    if (!mounted) return;
+    context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
+    _loadAttemptStatus();
+  }
+
+  void _generateQuestions() {
+    context.read<QuestionBloc>().add(
+          GenerateQuestions(
+            documentId: widget.documentId,
+            questionType: _selectedQuestionType,
+            difficulty: 'medium',
+            numQuestions: 5,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Questions'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showGenerateDialog(context),
-          ),
-        ],
-      ),
-      backgroundColor: AppTheme.backgroundColor,
-      body: BlocBuilder<QuestionBloc, QuestionState>(
-        builder: (context, state) {
-          if (state is QuestionLoading || state is QuestionInitial) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is QuestionLoaded) {
-            if (state.questions.isEmpty) {
-              return EmptyState(
-                title: 'No Questions Yet',
-                message: 'Generate questions to start practicing',
-                icon: Icons.quiz_outlined,
-                action: Container(
+      backgroundColor: backgroundColor,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showGenerateDialog(context),
-                    icon: const Icon(Icons.auto_awesome, color: Colors.white),
-                    label: const Text(
-                      'Generate Questions',
-                      style: TextStyle(color: Colors.white),
+                    color: backgroundColor.withOpacity(0.8),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.white.withOpacity(0.05),
+                        width: 1,
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  ),
+                  child: ClipRRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.lens_blur,
+                                color: primaryColor,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'LearnLens',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.account_circle,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              );
-            }
+                // Main content
+                Expanded(
+                  child: BlocConsumer<QuestionBloc, QuestionState>(
+                listener: (context, state) {
+                  if (state is QuestionGenerated) {
+                    // Reload questions after generation
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _refreshQuestions();
+                    });
+                  } else if (state is QuestionError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.message),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  if (state is QuestionLoading || state is QuestionInitial) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                      ),
+                    );
+                  } else if (state is QuestionGenerating) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Generating questions...',
+                            style: GoogleFonts.manrope(
+                              color: mutedText,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else if (state is QuestionLoaded) {
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        _refreshQuestions();
+                        // Wait a bit for the refresh to complete
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                      color: primaryColor,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                        child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Question Engine Section
+                          _buildQuestionEngineSection(state.questions.isEmpty),
+                          const SizedBox(height: 32),
+                          // Generated List Header
+                          if (state.questions.isNotEmpty) ...[
+                            _buildListHeader(),
+                            const SizedBox(height: 16),
+                            // Question Cards
+                            ...state.questions.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final question = entry.value;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _QuestionCard(
+                                  question: question,
+                                  index: index + 1,
+                                  totalQuestions: state.questions.length,
+                                  hasAttempt: _attemptStatus[question.questionId] ?? false,
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 100), // Space for bottom indicator
+                          ] else ...[
+                            const SizedBox(height: 100),
+                          ],
+                        ],
+                        ),
+                      ),
+                    );
+                  } else if (state is QuestionError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error: ${state.message}',
+                            style: GoogleFonts.manrope(
+                              color: Colors.red,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.black,
+                            ),
+                            child: Text(
+                              'Retry',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.questions.length,
-              itemBuilder: (context, index) {
-                final question = state.questions[index];
-                return _QuestionCard(question: question);
-              },
-            );
-          } else if (state is QuestionGenerating) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Generating questions...'),
-                ],
+                  return const SizedBox.shrink();
+                },
               ),
-            );
-          } else if (state is QuestionGenerated) {
-            // Reload questions after generation
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
-            });
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is QuestionError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${state.message}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
-
-  void _showGenerateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: const Text('Generate Questions'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _selectedQuestionType,
-              decoration: const InputDecoration(labelText: 'Question Type'),
-              items: const [
-                DropdownMenuItem(value: 'mcq', child: Text('Multiple Choice')),
-                DropdownMenuItem(value: 'short_answer', child: Text('Short Answer')),
-                DropdownMenuItem(value: 'long_answer', child: Text('Long Answer')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedQuestionType = value!;
-                });
-              },
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedDifficulty,
-              decoration: const InputDecoration(labelText: 'Difficulty'),
-              items: const [
-                DropdownMenuItem(value: 'easy', child: Text('Easy')),
-                DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                DropdownMenuItem(value: 'hard', child: Text('Hard')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedDifficulty = value!;
-                });
+            ),
+            // Bottom Quiz Queue Indicator
+            BlocBuilder<QuestionBloc, QuestionState>(
+              builder: (context, state) {
+                final total = state is QuestionLoaded ? state.questions.length : 0;
+                if (total > 0) {
+                  return Positioned(
+                    bottom: 24,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: _buildQuizQueueIndicator(total),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
               },
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+      ),
+    );
+  }
+
+  Widget _buildQuestionEngineSection(bool isEmpty) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: 0,
           ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Question Engine',
+                      style: GoogleFonts.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'AI-optimized assessment',
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        color: mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          // Assessment Format Toggle
+          Text(
+            'ASSESSMENT FORMAT',
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: mutedText,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(
             decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
+              color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: ElevatedButton(
-              onPressed: () {
-                context.read<QuestionBloc>().add(
-                      GenerateQuestions(
-                        documentId: widget.documentId,
-                        questionType: _selectedQuestionType,
-                        difficulty: _selectedDifficulty,
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildFormatToggle(
+                    label: 'MCQs',
+                    isSelected: _selectedQuestionType == 'mcq',
+                    onTap: () => setState(() => _selectedQuestionType = 'mcq'),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildFormatToggle(
+                    label: 'Short Answer',
+                    isSelected: _selectedQuestionType == 'short_answer',
+                    onTap: () => setState(() => _selectedQuestionType = 'short_answer'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Generate Button
+          Material(
+            color: primaryColor,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: _generateQuestions,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bolt,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'GENERATE AI QUESTIONS',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: 0.5,
                       ),
-                    );
-                Navigator.pop(dialogContext);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
+                    ),
+                  ],
+                ),
               ),
-              child: const Text(
-                'Generate',
-                style: TextStyle(color: Colors.white),
-              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'AI will automatically generate a set of optimized questions based on your context.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontStyle: FontStyle.italic,
+              color: mutedText,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _QuestionCard extends StatelessWidget {
-  final Question question;
-
-  const _QuestionCard({required this.question});
-
-  Color _getDifficultyColor(String difficulty) {
-    switch (difficulty.toLowerCase()) {
-      case 'easy':
-        return AppTheme.successColor;
-      case 'medium':
-        return AppTheme.warningColor;
-      case 'hard':
-        return AppTheme.errorColor;
-      default:
-        return AppTheme.textSecondary;
-    }
+  Widget _buildFormatToggle({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.white.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? primaryColor : mutedText,
+          ),
+        ),
+      ),
+    );
   }
 
-  Color _getTypeColor(String type) {
-    switch (type) {
-      case 'mcq':
-        return AppTheme.primaryColor;
-      case 'short_answer':
-        return AppTheme.successColor;
-      case 'long_answer':
-        return AppTheme.accentColor;
-      default:
-        return AppTheme.textSecondary;
-    }
+  Widget _buildListHeader() {
+    return Row(
+      children: [
+        Text(
+          'GENERATED LIST',
+          style: GoogleFonts.manrope(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: mutedText,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.1),
+          ),
+        ),
+      ],
+    );
   }
 
-  IconData _getQuestionTypeIcon(String type) {
-    switch (type) {
-      case 'mcq':
-        return Icons.radio_button_checked;
-      case 'short_answer':
-        return Icons.short_text;
-      case 'long_answer':
-        return Icons.article;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final typeColor = _getTypeColor(question.questionType);
-    final difficultyColor = _getDifficultyColor(question.difficulty);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuestionDetailScreen(question: question),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildQuizQueueIndicator(int totalCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
+              Stack(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: typeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: backgroundColor,
+                        width: 2,
+                      ),
                     ),
                     child: Icon(
-                      _getQuestionTypeIcon(question.questionType),
-                      color: typeColor,
-                      size: 20,
+                      Icons.check,
+                      size: 14,
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: typeColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            question.questionType.toUpperCase().replaceAll('_', ' '),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: typeColor,
-                            ),
+                  Positioned(
+                    left: 20,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: cardDark,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: backgroundColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$totalCount',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: difficultyColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            question.difficulty.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: difficultyColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: AppTheme.textSecondary,
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(width: 16),
               Text(
-                question.questionText,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                'QUIZ QUEUE ACTIVE',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
               ),
             ],
           ),
@@ -345,3 +603,225 @@ class _QuestionCard extends StatelessWidget {
   }
 }
 
+class _QuestionCard extends StatelessWidget {
+  final Question question;
+  final int index;
+  final int totalQuestions;
+  final bool hasAttempt;
+
+  const _QuestionCard({
+    required this.question,
+    required this.index,
+    required this.totalQuestions,
+    required this.hasAttempt,
+  });
+
+  String _getStatus() {
+    if (hasAttempt) return 'Completed';
+    if (index == 1) return 'Pending';
+    return 'Not Started';
+  }
+
+  Color _getStatusColor() {
+    final status = _getStatus();
+    if (status == 'Completed') return correctGlow;
+    if (status == 'Pending') return accentPurple;
+    return mutedText;
+  }
+
+  String _getDifficultyText() {
+    return question.difficulty.substring(0, 1).toUpperCase() +
+        question.difficulty.substring(1);
+  }
+
+  int _getEstimatedTime() {
+    // Estimate time based on difficulty
+    switch (question.difficulty.toLowerCase()) {
+      case 'easy':
+        return 1;
+      case 'medium':
+        return 2;
+      case 'hard':
+        return 3;
+      default:
+        return 2;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = _getStatus();
+    final statusColor = _getStatusColor();
+    final isPending = status == 'Pending';
+
+    return GestureDetector(
+      onTap: () async {
+        // Get the parent state to access documentId and refresh method
+        final parentState = context.findAncestorStateOfType<_QuestionListScreenState>();
+        if (parentState == null) return;
+        
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuestionDetailScreen(
+              question: question,
+              questionIndex: index,
+              totalQuestions: totalQuestions,
+              documentId: parentState.widget.documentId,
+            ),
+          ),
+        );
+        // Refresh if an attempt was submitted
+        if (result == true) {
+          parentState._refreshQuestions();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: cardDark,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.08),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with badge and status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'MCQ #$index',
+                    style: GoogleFonts.manrope(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPending
+                        ? accentPurple.withOpacity(0.1)
+                        : Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: isPending
+                          ? accentPurple.withOpacity(0.2)
+                          : Colors.white.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        status.toUpperCase(),
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Question text
+            Text(
+              question.questionText,
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                height: 1.5,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            // Footer with time, difficulty, and chevron
+            Container(
+              padding: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withOpacity(0.05),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.schedule,
+                        size: 16,
+                        color: mutedText,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_getEstimatedTime()} min',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: mutedText,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.bar_chart,
+                        size: 16,
+                        color: mutedText,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _getDifficultyText(),
+                        style: GoogleFonts.manrope(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Colors.white.withOpacity(0.2),
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

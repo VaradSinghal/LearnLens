@@ -142,11 +142,22 @@ Only return the JSON array, no additional text."""
     ) -> Dict[str, Any]:
         """Evaluate a user's answer using LLM."""
         if question_type == "mcq":
-            # MCQ is exact match
+            # MCQ is exact match - compare letters (A, B, C, D)
+            # Normalize both to uppercase and strip whitespace
+            user_letter = user_answer.strip().upper()
+            correct_letter = correct_answer.strip().upper()
+            
+            # Extract first character if answer contains more than just the letter
+            if len(user_letter) > 1:
+                user_letter = user_letter[0]
+            if len(correct_letter) > 1:
+                correct_letter = correct_letter[0]
+            
+            is_correct = user_letter == correct_letter
             return {
-                "is_correct": user_answer.strip().upper() == correct_answer.strip().upper(),
-                "score": 1.0 if user_answer.strip().upper() == correct_answer.strip().upper() else 0.0,
-                "feedback": "",
+                "is_correct": is_correct,
+                "score": 1.0 if is_correct else 0.0,
+                "feedback": "Correct!" if is_correct else f"Correct answer is {correct_letter}",
             }
         
         # For descriptive answers, use LLM evaluation

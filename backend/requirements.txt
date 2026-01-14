@@ -32,3 +32,8 @@ python-dotenv
 httpx
 pytest
 pytest-asyncio
+
+# OCR for image processing
+easyocr
+Pillow
+numpy

@@ -1,14 +1,23 @@
 """Document processing service."""
 import io
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument
+from PIL import Image
 from app.services.text_chunker import TextChunker
 from app.services.vector_store import VectorStore
 from app.services.embedding_service import EmbeddingService
 from app.database import get_firestore
 from app.models import Chunk
 from app.config import settings
+
+# Try to import EasyOCR, fallback to None if not available
+try:
+    import easyocr
+    EASYOCR_AVAILABLE = True
+except ImportError:
+    EASYOCR_AVAILABLE = False
+    print("Warning: EasyOCR not installed. Image OCR will not work. Install with: pip install easyocr")
 
 
 class DocumentProcessor:
@@ -19,6 +28,8 @@ class DocumentProcessor:
         self.vector_store = VectorStore()
         self.embedding_service = EmbeddingService()
         self.db = get_firestore()
+        # Initialize OCR reader lazily (only when needed)
+        self._ocr_reader: Optional[Any] = None
     
     async def process_document(
         self,
@@ -133,9 +144,8 @@ class DocumentProcessor:
         elif file_extension == ".txt":
             return content.decode("utf-8")
         elif file_extension in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
-            # For images, return a placeholder text indicating it's an image
-            # In production, you'd use OCR (e.g., Tesseract, Google Vision API)
-            return f"[Image file: {filename}. OCR not implemented yet. Image stored for future processing.]"
+            # Use OCR to extract text from images
+            return self._extract_from_image(content, filename)
         else:
             raise ValueError(f"Unsupported file type: {file_extension}")
     
@@ -157,6 +167,83 @@ class DocumentProcessor:
             text += paragraph.text + "\n"
         return text
     
+    def _extract_from_image(self, content: bytes, filename: str) -> str:
+        """Extract text from image using OCR."""
+        if not EASYOCR_AVAILABLE:
+            return f"[Image file: {filename}. OCR not available. Please install EasyOCR: pip install easyocr]"
+        
+        try:
+            # Initialize OCR reader if not already done (lazy initialization)
+            if self._ocr_reader is None:
+                print("Initializing EasyOCR reader (this may take a moment on first use - downloading models)...")
+                # Use English by default, can be extended to support other languages
+                # gpu=False to work on systems without GPU
+                # verbose=False to reduce output noise
+                self._ocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+            
+            # Load image from bytes
+            image = Image.open(io.BytesIO(content))
+            
+            # Handle EXIF orientation for mobile camera images
+            # Mobile cameras often store images with rotation metadata
+            try:
+                from PIL import ImageOps
+                # Auto-rotate based on EXIF orientation tag
+                image = ImageOps.exif_transpose(image)
+            except (AttributeError, Exception):
+                # No EXIF data or error, continue as-is
+                pass
+            
+            # Convert to RGB if necessary (EasyOCR works best with RGB)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Optional: Enhance image quality for better OCR
+            # Resize if image is too large (OCR works better on reasonable sizes)
+            max_dimension = 2000
+            if max(image.size) > max_dimension:
+                ratio = max_dimension / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+            
+            # Convert PIL Image to numpy array for EasyOCR
+            import numpy as np
+            image_array = np.array(image)
+            
+            # Perform OCR
+            print(f"Performing OCR on image: {filename} (size: {image.size})")
+            results = self._ocr_reader.readtext(image_array)
+            
+            # Extract text from results
+            # Each result is a tuple: (bbox, text, confidence)
+            extracted_lines = []
+            for (bbox, text, confidence) in results:
+                # Only include text with reasonable confidence (> 0.5)
+                if confidence > 0.5:
+                    extracted_lines.append(text.strip())
+            
+            if extracted_lines:
+                extracted_text = "\n".join(extracted_lines)
+                print(f"OCR extracted {len(extracted_lines)} text lines from {filename}")
+                return extracted_text
+            else:
+                print(f"No text detected in image: {filename} (or confidence too low)")
+                return f"[Image file: {filename}. No text detected in image. Please ensure the image contains clear, readable text.]"
+                
+        except ImportError as e:
+            # Handle missing numpy (required by EasyOCR)
+            error_msg = str(e)
+            print(f"Missing dependency for OCR: {error_msg}")
+            return f"[Image file: {filename}. OCR dependencies not installed. Please install: pip install easyocr numpy]"
+        except Exception as e:
+            # Log error but don't fail completely
+            import traceback
+            error_msg = str(e)
+            error_trace = traceback.format_exc()
+            print(f"OCR error for {filename}: {error_msg}")
+            print(f"Traceback: {error_trace}")
+            return f"[Image file: {filename}. OCR processing failed: {error_msg}]"
+    
     def _clean_text(self, text: str) -> str:
         """Clean extracted text."""
         # Remove excessive whitespace
@@ -174,9 +261,9 @@ class DocumentProcessor:
         lines = cleaned_text.split("\n")
         if len(lines) > 10:
             # Remove first and last 2 lines if they're very short
-            if len(lines[0]) < 30:
+            if len(lines) > 0 and len(lines[0]) < 30:
                 lines = lines[1:]
-            if len(lines[-1]) < 30:
+            if len(lines) > 0 and len(lines[-1]) < 30:
                 lines = lines[:-1]
         
         return "\n".join(lines)

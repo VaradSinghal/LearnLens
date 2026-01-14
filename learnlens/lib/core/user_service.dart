@@ -12,33 +12,24 @@ class UserService {
     try {
       final userDoc = _firestore.collection(_collectionName).doc(user.uid);
       
-      // Check if document exists
-      final docSnapshot = await userDoc.get();
+      final snapshot = await userDoc.get();
       
-      if (docSnapshot.exists) {
-        // Update existing document - preserve created_at
-        await userDoc.update({
-          'email': user.email ?? '',
-          'display_name': user.displayName ?? '',
-          'photo_url': user.photoURL ?? '',
-          'updated_at': FieldValue.serverTimestamp(),
-          'last_login': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Create new document - set created_at
-        await userDoc.set({
-          'email': user.email ?? '',
-          'display_name': user.displayName ?? '',
-          'photo_url': user.photoURL ?? '',
-          'created_at': FieldValue.serverTimestamp(),
-          'updated_at': FieldValue.serverTimestamp(),
-          'last_login': FieldValue.serverTimestamp(),
-        });
+      final Map<String, dynamic> data = {
+        'email': user.email ?? '',
+        'display_name': user.displayName ?? '',
+        'photo_url': user.photoURL ?? '',
+        'updated_at': FieldValue.serverTimestamp(),
+        'last_login': FieldValue.serverTimestamp(),
+      };
+
+      if (!snapshot.exists) {
+        data['created_at'] = FieldValue.serverTimestamp();
       }
+      
+      await userDoc.set(data, SetOptions(merge: true));
     } catch (e) {
       print('Error creating/updating user document: $e');
-      // Don't throw - we don't want to block auth flow if Firestore fails
-      // The user can still use the app, we'll just retry later
+      throw Exception('Failed to save user data: $e');
     }
   }
 
@@ -60,7 +51,7 @@ class UserService {
       }
     } catch (e) {
       print('Error ensuring user document exists: $e');
-      // Don't throw - non-blocking
+      throw Exception('Failed to verify user profile: $e');
     }
   }
 

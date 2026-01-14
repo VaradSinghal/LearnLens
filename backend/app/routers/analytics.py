@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.database import get_firestore
 from app.schemas import PerformanceAnalytics, TopicAccuracy, DifficultyStats
 from app.routers.auth import get_current_user
@@ -180,7 +180,8 @@ async def get_performance_analytics(
     
     # Calculate progress over time (last 30 days)
     progress_data = []
-    end_date = datetime.utcnow()
+    # Use timezone-aware datetime to match Firestore timestamps
+    end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=30)
     
     date_accuracy = {}
@@ -188,8 +189,13 @@ async def get_performance_analytics(
         # Ensure attempted_at is a datetime object
         if not attempt.attempted_at or not isinstance(attempt.attempted_at, datetime):
             continue
-        if attempt.attempted_at >= start_date:
-            date_key = attempt.attempted_at.date().isoformat()
+        # Ensure both datetimes are timezone-aware for comparison
+        attempt_time = attempt.attempted_at
+        if attempt_time.tzinfo is None:
+            # If timezone-naive, assume UTC
+            attempt_time = attempt_time.replace(tzinfo=timezone.utc)
+        if attempt_time >= start_date:
+            date_key = attempt_time.date().isoformat()
             if date_key not in date_accuracy:
                 date_accuracy[date_key] = {"total": 0, "correct": 0}
             
