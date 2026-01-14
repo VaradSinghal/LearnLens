@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Color Palette (Dark Theme)
-  static const Color primaryColor = Color(0xFF00AAFF); // Light Blue
-  static const Color backgroundColor = Color(0xFF0A0A0A); // Nearly Black
-  static const Color surfaceColor = Color(0xFF121212); // Deep Charcoal
+  // Color Palette (Dark/Black Theme)
+  static const Color primaryColor = Color(0xFFFFFFFF); // White for primary accents/text
+  static const Color backgroundColor = Color(0xFF000000); // Pure Black
+  static const Color surfaceColor = Color(0xFF121212); // Slightly lighter black for cards
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF9AB0BC); // Muted Silver
-  static const Color errorColor = Color(0xFFEF4444);
-  static const Color successColor = Color(0xFF10B981);
-  static const Color border = Color(0x19FFFFFF); // 10% White
+  static const Color textSecondary = Color(0xFFB0B0B0); // Light Grey
+  static const Color errorColor = Color(0xFFCF6679);
+  static const Color successColor = Color(0xFF81C784);
+  static const Color border = Color(0xFF333333); // Dark Grey border
 
   // Gradient Colors
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryColor, Color(0xFF0088CC)], // Blue gradient
+    colors: [primaryColor, Color(0xFFDDDDDD)],
   );
 
   static ThemeData get darkTheme {
@@ -31,8 +31,8 @@ class AppTheme {
         surface: surfaceColor,
         background: backgroundColor,
         error: errorColor,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
+        onPrimary: Colors.black, // Text on white primary should be black
+        onSecondary: Colors.black,
         onSurface: textPrimary,
         onBackground: textPrimary,
       ),
@@ -81,14 +81,31 @@ class AppTheme {
       // Component Themes
       appBarTheme: AppBarTheme(
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleTextStyle: GoogleFonts.manrope(
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: textPrimary,
         ),
-        iconTheme: const IconThemeData(color: textPrimary),
+        iconTheme: const IconThemeData(
+          color: textPrimary,
+          weight: 300, // Material Symbols Weight
+          opticalSize: 24,
+        ),
+        actionsIconTheme: const IconThemeData(
+          color: textPrimary,
+          weight: 300,
+          opticalSize: 24,
+        ),
+      ),
+      
+      iconTheme: const IconThemeData(
+        color: textPrimary,
+        weight: 300, // Lighter, modern look
+        fill: 0.0,   // Outlined
+        opticalSize: 24,
       ),
       
       cardTheme: const CardThemeData(
@@ -102,7 +119,7 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withOpacity(0.03),
+        fillColor: const Color(0xFF1E1E1E),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -127,7 +144,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: Colors.black, // Text on white button is black
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -139,6 +156,17 @@ class AppTheme {
           ),
         ),
       ),
+      
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: backgroundColor,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: textSecondary,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+      ),
+      
     );
   }
 }

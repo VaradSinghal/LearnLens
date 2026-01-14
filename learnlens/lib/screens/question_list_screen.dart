@@ -2,20 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../theme/app_theme.dart';
 import '../bloc/question/question_bloc.dart';
 import '../models/question.dart';
 import '../widgets/empty_state.dart';
 import '../core/api_client.dart';
 import 'question_detail_screen.dart';
-
-// Design colors matching the HTML
-const Color primaryColor = Color(0xFF1FE7F9);
-const Color backgroundColor = Color(0xFF121214);
-const Color cardDark = Color(0xFF1C1C21);
-const Color accentPurple = Color(0xFFA887EB);
-const Color slateSilver = Color(0xFFE0E0E0);
-const Color mutedText = Color(0xFF9DADB8);
-const Color correctGlow = Color(0xFF4ADE80);
 
 /// Screen displaying questions for a document
 class QuestionListScreen extends StatefulWidget {
@@ -90,7 +83,8 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -100,7 +94,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: BoxDecoration(
-                    color: backgroundColor.withOpacity(0.8),
+                    color: AppTheme.backgroundColor.withOpacity(0.8),
                     border: Border(
                       bottom: BorderSide(
                         color: Colors.white.withOpacity(0.05),
@@ -116,9 +110,9 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                Icons.lens_blur,
-                                color: primaryColor,
+                                Icon(
+                                Symbols.lens_blur,
+                                color: AppTheme.textPrimary,
                                 size: 24,
                               ),
                               const SizedBox(width: 8),
@@ -140,9 +134,9 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                               color: Colors.white.withOpacity(0.05),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Icon(
-                              Icons.account_circle,
-                              color: Colors.white,
+                            child: const Icon(
+                              Symbols.account_circle,
+                              color: AppTheme.textPrimary,
                               size: 24,
                             ),
                           ),
@@ -173,7 +167,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                   if (state is QuestionLoading || state is QuestionInitial) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                       ),
                     );
                   } else if (state is QuestionGenerating) {
@@ -182,13 +176,13 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'Generating questions...',
                             style: GoogleFonts.manrope(
-                              color: mutedText,
+                              color: AppTheme.textSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -242,10 +236,10 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.error_outline,
+                          const Icon(
+                            Symbols.error,
                             size: 64,
-                            color: Colors.red,
+                            color: AppTheme.errorColor,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -261,7 +255,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                               context.read<QuestionBloc>().add(LoadQuestions(widget.documentId));
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
+                              backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.black,
                             ),
                             child: Text(
@@ -308,15 +302,15 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
   Widget _buildQuestionEngineSection(bool isEmpty) {
     return Container(
       decoration: BoxDecoration(
-        color: cardDark,
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: AppTheme.border,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 20,
             spreadRadius: 0,
           ),
@@ -335,9 +329,9 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                   color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  Icons.auto_awesome,
-                  color: primaryColor,
+                child: const Icon(
+                  Symbols.auto_awesome,
+                  color: AppTheme.primaryColor,
                   size: 20,
                 ),
               ),
@@ -408,7 +402,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
           const SizedBox(height: 24),
           // Generate Button
           Material(
-            color: primaryColor,
+            color: AppTheme.primaryColor,
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               onTap: _generateQuestions,
@@ -419,7 +413,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
+                      color: AppTheme.primaryColor.withOpacity(0.3),
                       blurRadius: 15,
                       spreadRadius: 0,
                     ),
@@ -428,8 +422,8 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.bolt,
+                    const Icon(
+                      Symbols.bolt,
                       color: Colors.black,
                       size: 20,
                     ),
@@ -485,7 +479,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
           style: GoogleFonts.manrope(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: isSelected ? primaryColor : mutedText,
+            color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
           ),
         ),
       ),
@@ -500,7 +494,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
           style: GoogleFonts.manrope(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: mutedText,
+            color: AppTheme.textSecondary,
             letterSpacing: 1.5,
           ),
         ),
@@ -519,7 +513,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppTheme.primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: Colors.white.withOpacity(0.2),
@@ -545,15 +539,15 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      color: AppTheme.primaryColor,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: backgroundColor,
+                        color: AppTheme.backgroundColor,
                         width: 2,
                       ),
                     ),
-                    child: Icon(
-                      Icons.check,
+                    child: const Icon(
+                      Symbols.check,
                       size: 14,
                       color: Colors.black,
                     ),
@@ -564,10 +558,10 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: cardDark,
+                        color: AppTheme.surfaceColor,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: backgroundColor,
+                          color: AppTheme.backgroundColor,
                           width: 2,
                         ),
                       ),
@@ -577,7 +571,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                           style: GoogleFonts.manrope(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                       ),
@@ -591,7 +585,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                 style: GoogleFonts.manrope(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppTheme.textPrimary,
                   letterSpacing: 2,
                 ),
               ),
@@ -697,7 +691,7 @@ class _QuestionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -715,12 +709,12 @@ class _QuestionCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isPending
                         ? accentPurple.withOpacity(0.1)
-                        : Colors.white.withOpacity(0.05),
+                        : AppTheme.textSecondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: isPending
                           ? accentPurple.withOpacity(0.2)
-                          : Colors.white.withOpacity(0.1),
+                          : AppTheme.textSecondary.withOpacity(0.1),
                       width: 1,
                     ),
                   ),
@@ -757,7 +751,7 @@ class _QuestionCard extends StatelessWidget {
               style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: AppTheme.textPrimary,
                 height: 1.5,
               ),
               maxLines: 3,
@@ -806,14 +800,14 @@ class _QuestionCard extends StatelessWidget {
                         style: GoogleFonts.manrope(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: mutedText,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ],
                   ),
                   Icon(
-                    Icons.chevron_right,
-                    color: Colors.white.withOpacity(0.2),
+                    Symbols.chevron_right,
+                    color: AppTheme.textSecondary,
                     size: 20,
                   ),
                 ],

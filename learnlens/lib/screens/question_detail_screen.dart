@@ -1,19 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../theme/app_theme.dart';
 import '../core/api_client.dart';
 import '../models/question.dart';
 import '../models/attempt.dart';
 import 'question_list_screen.dart';
-
-// Design colors matching the HTML
-const Color primaryColor = Color(0xFFA65EED);
-const Color backgroundColor = Color(0xFF1A1A1A);
-const Color glassBg = Color.fromRGBO(48, 48, 48, 0.45);
-const Color glassBorder = Color.fromRGBO(212, 212, 212, 0.15);
-const Color correctGlow = Color(0xFF4ADE80);
-const Color incorrectGlow = Color(0xFFF87171);
-const Color mutedText = Color(0xFFA0A0A0);
 
 /// Screen for viewing and answering a question
 class QuestionDetailScreen extends StatefulWidget {
@@ -115,7 +108,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             content: Row(
               children: [
                 Icon(
-                  attempt.isCorrect ? Icons.check_circle : Icons.info_outline,
+                  attempt.isCorrect ? Symbols.check_circle : Symbols.info,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -128,12 +121,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                 ),
               ],
             ),
-            backgroundColor: attempt.isCorrect ? correctGlow : incorrectGlow,
+            backgroundColor: attempt.isCorrect ? AppTheme.primaryColor : AppTheme.errorColor,
             duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -171,7 +165,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     final showReview = _lastAttempt != null;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -186,9 +180,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       width: 48,
                       height: 48,
                       alignment: Alignment.center,
-                      child: Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
+                      child: const Icon(
+                        Symbols.arrow_back_ios,
+                        color: AppTheme.textPrimary,
                         size: 20,
                       ),
                     ),
@@ -200,7 +194,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       style: GoogleFonts.manrope(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppTheme.textPrimary,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -225,7 +219,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           style: GoogleFonts.manrope(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: primaryColor,
+                            color: AppTheme.primaryColor,
                             letterSpacing: 2,
                           ),
                         ),
@@ -238,7 +232,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         style: GoogleFonts.manrope(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppTheme.textPrimary,
                           height: 1.3,
                         ),
                       ),
@@ -345,7 +339,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       style: GoogleFonts.manrope(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: mutedText,
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                   ),
@@ -360,7 +354,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
 
   Widget _buildReviewSection() {
     final isCorrect = _lastAttempt!.isCorrect;
-    final statusColor = isCorrect ? correctGlow : incorrectGlow;
+    final statusColor = isCorrect ? AppTheme.successColor : AppTheme.errorColor;
     
     // For MCQ, get the correct option text
     String correctAnswerText = _lastAttempt!.correctAnswer;
@@ -409,7 +403,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 style: GoogleFonts.manrope(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: mutedText,
+                  color: AppTheme.textSecondary,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -434,7 +428,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isCorrect ? Icons.check_circle : Icons.cancel,
+                      isCorrect ? Symbols.check_circle : Symbols.cancel,
                       color: statusColor,
                       size: 18,
                     ),
@@ -480,18 +474,18 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             Color? iconColor;
             
             if (isCorrectOption) {
-              borderColor = correctGlow;
-              bgColor = correctGlow.withOpacity(0.15);
-              icon = Icons.check_circle;
-              iconColor = correctGlow;
+              borderColor = AppTheme.successColor;
+              bgColor = AppTheme.successColor.withOpacity(0.15);
+              icon = Symbols.check_circle;
+              iconColor = AppTheme.successColor;
             } else if (isUserSelected && !isCorrectOption) {
-              borderColor = incorrectGlow;
-              bgColor = incorrectGlow.withOpacity(0.15);
-              icon = Icons.cancel;
-              iconColor = incorrectGlow;
+              borderColor = AppTheme.errorColor;
+              bgColor = AppTheme.errorColor.withOpacity(0.15);
+              icon = Symbols.cancel;
+              iconColor = AppTheme.errorColor;
             } else {
-              borderColor = glassBorder;
-              bgColor = glassBg;
+              borderColor = AppTheme.border;
+              bgColor = AppTheme.surfaceColor;
             }
             
             return Container(
@@ -517,15 +511,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           height: 40,
                           decoration: BoxDecoration(
                             color: isCorrectOption 
-                                ? correctGlow 
-                                : (isUserSelected ? incorrectGlow : Colors.white.withOpacity(0.05)),
+                                ? AppTheme.successColor 
+                                : (isUserSelected ? AppTheme.errorColor : Colors.white.withOpacity(0.05)),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               letter,
                               style: GoogleFonts.manrope(
-                                color: isCorrectOption || isUserSelected ? Colors.white : mutedText,
+                                color: isCorrectOption || isUserSelected ? Colors.white : AppTheme.textSecondary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
@@ -579,9 +573,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       Row(
                         children: [
                           Icon(
-                            Icons.lightbulb_outline,
+                            Symbols.lightbulb,
                             size: 18,
-                            color: primaryColor,
+                            color: AppTheme.primaryColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -589,7 +583,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             style: GoogleFonts.manrope(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: primaryColor,
+                              color: AppTheme.primaryColor,
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -617,7 +611,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               // Your Answer Card
               _buildAnswerCard(
                 label: 'Your Answer',
-                icon: Icons.person,
+                icon: Symbols.person,
                 answer: userAnswerText,
                 isCorrect: false,
               ),
@@ -625,7 +619,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               // Expected Answer Card
               _buildAnswerCard(
                 label: 'Correct Answer',
-                icon: Icons.verified_user,
+                icon: Symbols.verified_user,
                 answer: correctAnswerText,
                 isCorrect: true,
               ),
@@ -644,7 +638,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     style: GoogleFonts.manrope(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: mutedText,
+                      color: AppTheme.textSecondary,
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -653,7 +647,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     _getKeyDifferences(),
                     style: GoogleFonts.manrope(
                       fontSize: 14,
-                      color: mutedText,
+                      color: AppTheme.textSecondary,
                       height: 1.5,
                     ),
                   ),
@@ -679,20 +673,20 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: glassBg,
+            color: AppTheme.surfaceColor,
             borderRadius: BorderRadius.circular(12),
             border: isCorrect
                 ? Border(
                     left: BorderSide(
-                      color: correctGlow.withOpacity(0.6),
+                      color: AppTheme.successColor.withOpacity(0.6),
                       width: 4,
                     ),
-                    top: BorderSide(color: glassBorder, width: 1),
-                    right: BorderSide(color: glassBorder, width: 1),
-                    bottom: BorderSide(color: glassBorder, width: 1),
+                    top: BorderSide(color: AppTheme.border, width: 1),
+                    right: BorderSide(color: AppTheme.border, width: 1),
+                    bottom: BorderSide(color: AppTheme.border, width: 1),
                   )
                 : Border.all(
-                    color: glassBorder,
+                    color: AppTheme.border,
                     width: 1,
                   ),
           ),
@@ -704,7 +698,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               Icon(
                 icon,
                 size: 16,
-                color: isCorrect ? correctGlow : mutedText,
+                color: isCorrect ? AppTheme.successColor : AppTheme.textSecondary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -712,7 +706,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 style: GoogleFonts.manrope(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isCorrect ? correctGlow : mutedText,
+                  color: isCorrect ? AppTheme.successColor : AppTheme.textSecondary,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -767,12 +761,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? primaryColor.withOpacity(0.15)
-                              : glassBg,
+                              ? AppTheme.primaryColor.withOpacity(0.15)
+                              : AppTheme.surfaceColor,
                           border: Border.all(
                             color: isSelected
-                                ? primaryColor
-                                : glassBorder,
+                                ? AppTheme.primaryColor
+                                : AppTheme.border,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -792,7 +786,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 child: Text(
                                   letter,
                                   style: GoogleFonts.manrope(
-                                    color: isSelected ? Colors.white : mutedText,
+                                    color: isSelected ? Colors.white : AppTheme.textSecondary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
                                   ),

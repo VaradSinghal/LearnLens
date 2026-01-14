@@ -103,12 +103,10 @@ class _SplashWrapperState extends State<SplashWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    // Auth check triggered by SplashScreen onComplete
   }
 
   Future<void> _checkAuth() async {
-    // Artificial delay for splash effect
-    await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -121,6 +119,8 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return const SplashScreen();
+    return SplashScreen(
+      onComplete: _checkAuth,
+    );
   }
 }

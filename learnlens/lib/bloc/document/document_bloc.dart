@@ -66,11 +66,15 @@ class DocumentLoaded extends DocumentState {
 
 class DocumentUploading extends DocumentState {
   final double? progress;
+  final List<Document> currentDocuments;
 
-  const DocumentUploading({this.progress});
+  const DocumentUploading({
+    this.progress, 
+    this.currentDocuments = const [],
+  });
 
   @override
-  List<Object> get props => [progress ?? 0.0];
+  List<Object> get props => [progress ?? 0.0, currentDocuments];
 }
 
 class DocumentUploaded extends DocumentState {
@@ -124,7 +128,10 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     UploadDocument event,
     Emitter<DocumentState> emit,
   ) async {
-    emit(DocumentUploading());
+    // Preserve current documents
+    final currentDocs = state is DocumentLoaded ? (state as DocumentLoaded).documents : <Document>[];
+    emit(DocumentUploading(currentDocuments: currentDocs));
+    
     try {
       // Upload document - API client will fetch full document after upload
       final response = await _apiClient.uploadDocument(event.filePath);
@@ -151,7 +158,8 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     UploadImages event,
     Emitter<DocumentState> emit,
   ) async {
-    emit(DocumentUploading());
+    final currentDocs = state is DocumentLoaded ? (state as DocumentLoaded).documents : <Document>[];
+    emit(DocumentUploading(currentDocuments: currentDocs));
     try {
       List<XFile> pickedImages = [];
       

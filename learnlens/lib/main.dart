@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'Learn Lens',
-        theme: AppTheme.darkTheme, // Using our new Unified Dark Theme
+        theme: AppTheme.darkTheme, // Reverted to Dark/Black Theme
         debugShowCheckedModeBanner: false,
         routerConfig: router,
       ),

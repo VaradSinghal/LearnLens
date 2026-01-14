@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback? onComplete;
@@ -64,15 +66,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Colors from the HTML design
-    const primaryBlue = Color(0xFF00AAFF);
-    const backgroundDark = Color(0xFF1A1A1A);
-    const backgroundLight = Color(0xFFF0F2F4);
-    const slateSilver = Color(0xFFE0E0E0);
-    const mutedSilver = Color(0xFF9AB0BC);
-
     return Scaffold(
-      backgroundColor: backgroundDark,
+      backgroundColor: AppTheme.backgroundColor, // Black
       body: SafeArea(
         child: Stack(
           children: [
@@ -81,205 +76,118 @@ class _SplashScreenState extends State<SplashScreen>
               padding: const EdgeInsets.all(32.0),
               child: Column(
                 children: [
-                  // Top spacer
-                  const SizedBox(height: 48),
+                  const Spacer(),
                   
                   // Central brand identity
-                  Expanded(
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // AI-Blue Pulse Glow behind Logo
-                          AnimatedBuilder(
-                            animation: _pulseAnimation,
-                            builder: (context, child) {
-                              return Container(
-                                width: 256,
-                                height: 256,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: RadialGradient(
-                                    colors: [
-                                      primaryBlue.withOpacity(
-                                        0.2 * _pulseAnimation.value,
-                                      ),
-                                      primaryBlue.withOpacity(0),
-                                    ],
-                                    stops: const [0.0, 0.7],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          
-                          // Logo and Text Column
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Logo Icon
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: slateSilver.withOpacity(0.3),
-                                    width: 1.5,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: backgroundDark.withOpacity(0.8),
-                                ),
-                                child: const Icon(
-                                  Icons.lens_blur,
-                                  color: slateSilver,
-                                  size: 48,
-                                ),
-                              ),
-                              
-                              const SizedBox(height: 32),
-                              
-                              // Typography Block
-                              Column(
-                                children: [
-                                  // LearnLens Title
-                                  Text(
-                                    'LearnLens',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 42,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -0.03 * 42,
-                                      height: 1.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Subtitle
-                                  Text(
-                                    'Intelligent Learning Systems',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryBlue,
-                                      letterSpacing: 0.4 * 10,
-                                      height: 1.0,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  // Footer / Progress Area
-                  SizedBox(
-                    width: 280,
-                    child: Column(
+                  Center(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        // System Status
-                        Text(
-                          'Calibrating Neural Engine',
-                          style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: mutedSilver.withOpacity(0.6),
-                            letterSpacing: 0.1 * 11,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Razor-thin Progress Bar
+                        // Subtle Glow
                         AnimatedBuilder(
-                          animation: _progressAnimation,
+                          animation: _pulseAnimation,
                           builder: (context, child) {
-                            return Stack(
-                              children: [
-                                // Background
-                                Container(
-                                  width: double.infinity,
-                                  height: 1,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(0.5),
-                                  ),
+                            return Container(
+                              width: 256,
+                              height: 256,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.1 * _pulseAnimation.value),
+                                    Colors.transparent,
+                                  ],
+                                  stops: const [0.0, 0.7],
                                 ),
-                                // Progress fill (animated from 0 to 100%)
-                                FractionallySizedBox(
-                                  widthFactor: _progressAnimation.value,
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    height: 1,
-                                    decoration: BoxDecoration(
-                                      color: primaryBlue,
-                                      borderRadius: BorderRadius.circular(0.5),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: primaryBlue.withOpacity(0.6),
-                                          blurRadius: 8,
-                                          spreadRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             );
                           },
                         ),
-                        const SizedBox(height: 24),
                         
-                        // Secondary Metadata
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Logo and Text
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Ver. 1.0.0',
-                              style: GoogleFonts.manrope(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.7),
-                                letterSpacing: 0.05 * 9,
+                            // Logo Icon
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1.0,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                color: Colors.black,
+                              ),
+                              child: const Icon(
+                                Symbols.lens_blur,
+                                color: Colors.white,
+                                size: 40,
                               ),
                             ),
-                            AnimatedBuilder(
-                              animation: _progressAnimation,
-                              builder: (context, child) {
-                                final remainingTime = 
-                                    (4.5 * (1 - _progressAnimation.value));
-                                return Text(
-                                  'EST: ${remainingTime.toStringAsFixed(1)}s',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white.withOpacity(0.7),
-                                    letterSpacing: 0.05 * 9,
-                                  ),
-                                );
-                              },
+                            
+                            const SizedBox(height: 32),
+                            
+                            // Typography
+                            Text(
+                              'LearnLens',
+                              style: GoogleFonts.manrope(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Intelligent Learning Systems',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white54,
+                                letterSpacing: 2.0,
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 48),
-                ],
-              ),
-            ),
-            
-            // Decorative UI Element (Edge Frame)
-            Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.03),
-                    width: 1,
+                  
+                  const Spacer(),
+                  
+                  // Footer / Progress Area
+                  SizedBox(
+                    width: 200,
+                    child: Column(
+                      children: [
+                        // Minimal Progress Bar
+                        AnimatedBuilder(
+                          animation: _progressAnimation,
+                          builder: (context, child) {
+                            return LinearProgressIndicator(
+                              value: _progressAnimation.value,
+                              backgroundColor: Colors.white10,
+                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                              minHeight: 2,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        Text(
+                          'v1.0.0',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            color: Colors.white38,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           ],
