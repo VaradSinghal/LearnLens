@@ -8,6 +8,7 @@ import '../screens/analytics_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import '../widgets/scaffold_with_nav_bar.dart';
+import '../screens/question_list_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -41,8 +42,14 @@ final router = GoRouter(
               path: '/home', // This will be the default home/documents
               builder: (context, state) => const DocumentListScreen(),
               routes: [
-                 // Sub-routes for documents can go here
-                 // GoRoute(path: 'details/:id', builder: ...)
+                GoRoute(
+                  path: 'questions/:documentId',
+                  name: 'questions',
+                  builder: (context, state) {
+                    final documentId = state.pathParameters['documentId']!;
+                    return QuestionListScreen(documentId: documentId);
+                  },
+                ),
               ],
             ),
           ],

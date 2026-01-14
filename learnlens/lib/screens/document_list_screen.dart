@@ -263,11 +263,9 @@ class _DocumentCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           if (document.status == 'processed') {
-             Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => QuestionListScreen(documentId: document.documentId),
-              ),
+             context.pushNamed(
+              'questions',
+              pathParameters: {'documentId': document.documentId},
             );
           }
         },

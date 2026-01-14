@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../theme/app_theme.dart';
@@ -83,7 +84,6 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-    return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Stack(
@@ -108,13 +108,14 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          IconButton(
+                            onPressed: () => context.pop(),
+                            icon: const Icon(Symbols.arrow_back_ios, size: 20),
+                            color: AppTheme.textPrimary,
+                          ),
+                          const SizedBox(width: 8),
                           Row(
                             children: [
-                                Icon(
-                                Symbols.lens_blur,
-                                color: AppTheme.textPrimary,
-                                size: 24,
-                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'LearnLens',
@@ -126,19 +127,6 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                                 ),
                               ),
                             ],
-                          ),
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Symbols.account_circle,
-                              color: AppTheme.textPrimary,
-                              size: 24,
-                            ),
                           ),
                         ],
                       ),
@@ -196,7 +184,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                         // Wait a bit for the refresh to complete
                         await Future.delayed(const Duration(milliseconds: 500));
                       },
-                      color: primaryColor,
+                      color: AppTheme.primaryColor,
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                         child: Column(
@@ -276,23 +264,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
             ),
               ],
             ),
-            // Bottom Quiz Queue Indicator
-            BlocBuilder<QuestionBloc, QuestionState>(
-              builder: (context, state) {
-                final total = state is QuestionLoaded ? state.questions.length : 0;
-                if (total > 0) {
-                  return Positioned(
-                    bottom: 24,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: _buildQuizQueueIndicator(total),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+
           ],
         ),
       ),
@@ -326,7 +298,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -353,7 +325,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
                       'AI-optimized assessment',
                       style: GoogleFonts.manrope(
                         fontSize: 12,
-                        color: mutedText,
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -368,7 +340,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
             style: GoogleFonts.manrope(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: mutedText,
+              color: AppTheme.textSecondary,
               letterSpacing: 2,
             ),
           ),
@@ -449,7 +421,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
             style: GoogleFonts.manrope(
               fontSize: 10,
               fontStyle: FontStyle.italic,
-              color: mutedText,
+              color: AppTheme.textSecondary,
             ),
           ),
         ],
@@ -509,92 +481,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
     );
   }
 
-  Widget _buildQuizQueueIndicator(int totalCount) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppTheme.backgroundColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Symbols.check,
-                      size: 14,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Positioned(
-                    left: 20,
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppTheme.backgroundColor,
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$totalCount',
-                          style: GoogleFonts.manrope(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'QUIZ QUEUE ACTIVE',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 }
 
 class _QuestionCard extends StatelessWidget {
@@ -618,9 +505,9 @@ class _QuestionCard extends StatelessWidget {
 
   Color _getStatusColor() {
     final status = _getStatus();
-    if (status == 'Completed') return correctGlow;
-    if (status == 'Pending') return accentPurple;
-    return mutedText;
+    if (status == 'Completed') return AppTheme.successColor;
+    if (status == 'Pending') return AppTheme.primaryColor;
+    return AppTheme.textSecondary;
   }
 
   String _getDifficultyText() {
@@ -673,7 +560,7 @@ class _QuestionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: cardDark,
+          color: AppTheme.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Colors.white.withOpacity(0.08),
@@ -699,7 +586,7 @@ class _QuestionCard extends StatelessWidget {
                     style: GoogleFonts.manrope(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                      color: AppTheme.primaryColor,
                       letterSpacing: 1,
                     ),
                   ),
@@ -708,12 +595,12 @@ class _QuestionCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: isPending
-                        ? accentPurple.withOpacity(0.1)
+                        ? AppTheme.primaryColor.withOpacity(0.1)
                         : AppTheme.textSecondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: isPending
-                          ? accentPurple.withOpacity(0.2)
+                          ? AppTheme.primaryColor.withOpacity(0.2)
                           : AppTheme.textSecondary.withOpacity(0.1),
                       width: 1,
                     ),
@@ -777,7 +664,7 @@ class _QuestionCard extends StatelessWidget {
                       Icon(
                         Icons.schedule,
                         size: 16,
-                        color: mutedText,
+                        color: AppTheme.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -785,14 +672,14 @@ class _QuestionCard extends StatelessWidget {
                         style: GoogleFonts.manrope(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: mutedText,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Icon(
                         Icons.bar_chart,
                         size: 16,
-                        color: mutedText,
+                        color: AppTheme.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(

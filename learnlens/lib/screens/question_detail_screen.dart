@@ -57,7 +57,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please select an answer'),
-            backgroundColor: incorrectGlow,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
         return;
@@ -70,7 +70,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please enter an answer'),
-            backgroundColor: incorrectGlow,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
         return;
@@ -144,7 +144,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: incorrectGlow,
+            backgroundColor: AppTheme.errorColor,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -263,7 +263,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: backgroundColor,
+                color: AppTheme.backgroundColor,
                 border: Border(
                   top: BorderSide(
                     color: Colors.white.withOpacity(0.05),
@@ -282,7 +282,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           Navigator.pop(context, true);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
+                          backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -305,7 +305,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       child: ElevatedButton(
                         onPressed: _isSubmitting ? null : _submitAnswer,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
+                          backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -456,7 +456,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: mutedText,
+                color: AppTheme.textSecondary,
                 letterSpacing: 1.5,
               ),
             ),
@@ -560,10 +560,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: glassBg,
+                    color: AppTheme.surfaceColor,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: glassBorder,
+                      color: AppTheme.border,
                       width: 1,
                     ),
                   ),
@@ -778,7 +778,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? primaryColor
+                                    ? AppTheme.primaryColor
                                     : Colors.white.withOpacity(0.05),
                                 shape: BoxShape.circle,
                               ),
@@ -800,14 +800,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 style: GoogleFonts.manrope(
                                   fontSize: 16,
                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                  color: isSelected ? Colors.white : mutedText,
+                                  color: isSelected ? Colors.white : AppTheme.textSecondary,
                                 ),
                               ),
                             ),
                             if (isSelected)
                               Icon(
                                 Icons.radio_button_checked,
-                                color: primaryColor,
+                                color: AppTheme.primaryColor,
                                 size: 24,
                               ),
                           ],
@@ -828,10 +828,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: glassBg,
+                  color: AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: glassBorder,
+                    color: AppTheme.border,
                     width: 1,
                   ),
                 ),
@@ -846,7 +846,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         ? 'Enter your answer (1-2 sentences)'
                         : 'Enter your detailed answer',
                     hintStyle: GoogleFonts.manrope(
-                      color: mutedText,
+                      color: AppTheme.textSecondary,
                       fontSize: 16,
                     ),
                     border: InputBorder.none,
