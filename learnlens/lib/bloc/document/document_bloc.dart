@@ -227,12 +227,31 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     DeleteDocument event,
     Emitter<DocumentState> emit,
   ) async {
-    try {
-      await _apiClient.deleteDocument(event.documentId);
-      // Reload documents list
-      add(LoadDocuments());
-    } catch (e) {
-      emit(DocumentError(e.toString()));
+    final currentState = state;
+    if (currentState is DocumentLoaded) {
+      // Optimistically remove the document from the list
+      final updatedDocs = currentState.documents
+          .where((doc) => doc.documentId != event.documentId)
+          .toList();
+      emit(DocumentLoaded(updatedDocs));
+      
+      try {
+        await _apiClient.deleteDocument(event.documentId);
+        // Optional: reload from server to stay in sync, though optimistic update is done
+        // response = await _apiClient.getDocuments(); ...
+      } catch (e) {
+        // Rollback on error
+        emit(DocumentLoaded(currentState.documents));
+        emit(DocumentError('Failed to delete document: ${e.toString()}'));
+      }
+    } else {
+      // If of other states, just perform the delete and reload
+      try {
+        await _apiClient.deleteDocument(event.documentId);
+        add(LoadDocuments());
+      } catch (e) {
+        emit(DocumentError(e.toString()));
+      }
     }
   }
 }
